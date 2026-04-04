@@ -9,6 +9,15 @@ describe('Tasks API', () => {
     taskService._reset();
   });
 
+  describe('GET /', () => {
+    it('returns a basic welcome response', async () => {
+      const res = await request(app).get('/');
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body).toEqual({ message: 'Task API is running' });
+    });
+  });
+
   describe('GET /health', () => {
     it('returns service health status', async () => {
       const res = await request(app).get('/health');
