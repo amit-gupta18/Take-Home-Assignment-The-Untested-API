@@ -14,20 +14,12 @@ Completed comprehensive testing, bug discovery, and feature implementation for t
 
 ### Coverage Results
 
-```
-Test Suites: 2 passed, 2 total
-Tests:       38 passed, 38 total
-Snapshots:   0 total
-
-File             | % Stmts | % Branch | % Funcs | % Lines
------------      | ------- | -------- | ------- | -------
-All files        |  98.76  |  97.84   |  96.66  |  98.63
-src/routes       |   100   |   100    |   100   |   100
-src/services     |   100   |  95.45   |   100   |   100
-src/utils        |   100   |   100    |   100   |   100
-```
+![Jest Coverage Report](./task-api/src/utils/image.png)
 
 **Status:** ✅ Exceeds 80% coverage target.
+- Test Suites: 2 passed, 2 total
+- Tests: 38 passed, 38 total
+- Overall coverage: 98.76% statements, 97.84% branches, 96.66% functions, 98.63% lines
 
 ---
 
