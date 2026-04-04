@@ -9,6 +9,15 @@ describe('Tasks API', () => {
     taskService._reset();
   });
 
+  describe('GET /health', () => {
+    it('returns service health status', async () => {
+      const res = await request(app).get('/health');
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body).toEqual({ status: 'ok' });
+    });
+  });
+
   describe('GET /tasks', () => {
     it('returns all tasks', async () => {
       taskService.create({ title: 'Task A' });
