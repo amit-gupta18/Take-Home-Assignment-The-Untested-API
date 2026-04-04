@@ -32,6 +32,15 @@ describe('Tasks API', () => {
       expect(res.body[0].title).toBe('Done task');
     });
 
+    it('returns 400 for invalid status query', async () => {
+      taskService.create({ title: 'Todo task', status: 'todo' });
+
+      const res = await request(app).get('/tasks?status=in_');
+
+      expect(res.statusCode).toBe(400);
+      expect(res.body.error).toBe('status must be one of: todo, in_progress, done');
+    });
+
     it('returns paginated tasks when page and limit are provided', async () => {
       taskService.create({ title: 'Task 1' });
       taskService.create({ title: 'Task 2' });
@@ -40,8 +49,8 @@ describe('Tasks API', () => {
       const res = await request(app).get('/tasks?page=1&limit=2');
 
       expect(res.statusCode).toBe(200);
-      expect(res.body).toHaveLength(1);
-      expect(res.body[0].title).toBe('Task 3');
+      expect(res.body).toHaveLength(2);
+      expect(res.body.map((t) => t.title)).toEqual(['Task 1', 'Task 2']);
     });
 
     it('uses default pagination values when page/limit are invalid', async () => {
@@ -52,7 +61,8 @@ describe('Tasks API', () => {
       const res = await request(app).get('/tasks?page=abc&limit=xyz');
 
       expect(res.statusCode).toBe(200);
-      expect(res.body).toEqual([]);
+      expect(res.body).toHaveLength(3);
+      expect(res.body.map((t) => t.title)).toEqual(['Task 1', 'Task 2', 'Task 3']);
     });
   });
 
@@ -93,6 +103,7 @@ describe('Tasks API', () => {
         description: 'Some description',
         status: 'todo',
         priority: 'high',
+        assignee: null,
       });
       expect(res.body.id).toBeDefined();
       expect(res.body.createdAt).toBeDefined();
@@ -222,7 +233,7 @@ describe('Tasks API', () => {
       expect(res.statusCode).toBe(200);
       expect(res.body.id).toBe(existing.id);
       expect(res.body.status).toBe('done');
-      expect(res.body.priority).toBe('medium');
+      expect(res.body.priority).toBe('high');
       expect(res.body.completedAt).toBeDefined();
     });
 
@@ -234,8 +245,66 @@ describe('Tasks API', () => {
     });
   });
 
+  describe('PATCH /tasks/:id/assign', () => {
+    it('assigns a task when valid assignee is provided', async () => {
+      const existing = taskService.create({ title: 'Assign me' });
+
+      const res = await request(app)
+        .patch(`/tasks/${existing.id}/assign`)
+        .send({ assignee: 'Amit' });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.id).toBe(existing.id);
+      expect(res.body.assignee).toBe('Amit');
+    });
+
+    it('returns 400 when assignee is missing', async () => {
+      const existing = taskService.create({ title: 'Assign me' });
+
+      const res = await request(app)
+        .patch(`/tasks/${existing.id}/assign`)
+        .send({});
+
+      expect(res.statusCode).toBe(400);
+      expect(res.body.error).toBe('assignee is required and must be a non-empty string');
+    });
+
+    it('returns 400 when assignee is empty', async () => {
+      const existing = taskService.create({ title: 'Assign me' });
+
+      const res = await request(app)
+        .patch(`/tasks/${existing.id}/assign`)
+        .send({ assignee: '   ' });
+
+      expect(res.statusCode).toBe(400);
+      expect(res.body.error).toBe('assignee is required and must be a non-empty string');
+    });
+
+    it('returns 404 when task does not exist', async () => {
+      const res = await request(app)
+        .patch('/tasks/non-existent-id/assign')
+        .send({ assignee: 'Amit' });
+
+      expect(res.statusCode).toBe(404);
+      expect(res.body.error).toBe('Task not found');
+    });
+
+    it('returns 409 when task is already assigned', async () => {
+      const existing = taskService.create({ title: 'Assign me', assignee: 'John' });
+
+      const res = await request(app)
+        .patch(`/tasks/${existing.id}/assign`)
+        .send({ assignee: 'Amit' });
+
+      expect(res.statusCode).toBe(409);
+      expect(res.body.error).toBe('Task is already assigned');
+    });
+  });
+
   describe('App middleware and startup', () => {
     it('returns 500 for malformed json body (error middleware)', async () => {
+      const logSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
       const res = await request(app)
         .post('/tasks')
         .set('Content-Type', 'application/json')
@@ -243,6 +312,9 @@ describe('Tasks API', () => {
 
       expect(res.statusCode).toBe(500);
       expect(res.body).toEqual({ error: 'Internal server error' });
+      expect(logSpy).toHaveBeenCalled();
+
+      logSpy.mockRestore();
     });
 
     it('starts server when app.js is run directly', async () => {
